@@ -4,82 +4,73 @@ const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
 
-// Restore playlist metadata on load
-window.addEventListener('load', () => {
-  const savedNames = JSON.parse(localStorage.getItem('playlistNames') || '[]');
-  if (savedNames.length > 0) {
-    renderPlaceholderPlaylist(savedNames);
-  }
-});
-// Show placeholder playlist before files are reselected
-function renderPlaceholderPlaylist(names) {
-  playlistEl.innerHTML = '';
-  names.forEach(name => {
-    const li = document.createElement('li');
-    li.textContent = name + ' (reselect to play)';
-    li.style.opacity = '0.6';
-    playlistEl.appendChild(li);
+// IndexedDB setup
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('PlayItNowDB', 1);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      db.createObjectStore('songs', { keyPath: 'name' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
   });
 }
 
-// Handle file selection
-fileInput.addEventListener('change', () => {
-  const savedNames = JSON.parse(localStorage.getItem('playlistNames') || '[]');
-  console.log(fileInput.files);
-  Array.from(fileInput.files).forEach(file => {
-    console.log(file.name, file.type);
-    songs.push(file);
-  });
-  //songs = Array.from(fileInput.files).filter(file =>
-  //  file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
-  //);
+async function saveSongsToDB(files) {
+  const db = await openDB();
+  const tx = db.transaction('songs', 'readwrite');
+  const store = tx.objectStore('songs');
 
-  // Match reselected files to saved playlist
-  if (savedNames.length > 0) {
-    songs = songs.filter(file => savedNames.includes(file.name));
+  for (const file of files) {
+    await store.put({ name: file.name, blob: file });
   }
 
-  if (songs.length === 0) {
-    alert('No valid songs files selected.');
-    return;
+  await tx.complete;
+  localStorage.setItem('playlistOrder', JSON.stringify(files.map(f => f.name)));
+}
+
+async function loadSongsFromDB() {
+  const db = await openDB();
+  const tx = db.transaction('songs', 'readonly');
+  const store = tx.objectStore('songs');
+
+  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  const songs = [];
+
+  for (const name of order) {
+    const request = store.get(name);
+    const result = await new Promise((res, rej) => {
+      request.onsuccess = () => res(request.result);
+      request.onerror = () => rej(request.error);
+    });
+    if (result) songs.push(result.blob);
   }
 
-  // Save playlist metadata
-  const fileNames = songs.map(file => file.name);
-  localStorage.setItem('playlistNames', JSON.stringify(fileNames));
+  return songs;
+}
 
-  currentIndex = 0;
-  playSong(currentIndex);
-  renderPlaylist();
-});
-
-function playSong(index) {
-  const file = songs[index];
-  if (!file) return;
-
-  const url = URL.createObjectURL(file);
+function playSongFromBlob(blob) {
+  const url = URL.createObjectURL(blob);
   audioPlayer.src = url;
   audioPlayer.load();
   audioPlayer.play().catch(err => {
-    console.warn('Playback blocked or failed:', err);
-    alert('Tap the play button to start the song manually.');
+    console.warn('Playback failed:', err);
   });
-
-  highlightCurrent(index);
+  highlightCurrent(currentIndex);
 }
 
-function renderPlaylist() {
+function renderPlaylist(names) {
   playlistEl.innerHTML = '';
-  songs.forEach((song, i) => {
+  names.forEach((name, i) => {
     const li = document.createElement('li');
-    li.textContent = song.name;
+    li.textContent = name;
     li.addEventListener('click', () => {
       currentIndex = i;
-      playSong(currentIndex);
+      playSongFromBlob(songs[currentIndex]);
     });
     playlistEl.appendChild(li);
   });
-  highlightCurrent(currentIndex);
 }
 
 function highlightCurrent(index) {
@@ -89,10 +80,37 @@ function highlightCurrent(index) {
   });
 }
 
+// File selection
+fileInput.addEventListener('change', async () => {
+  const files = Array.from(fileInput.files).filter(file =>
+    file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
+  );
+  if (files.length === 0) return;
+
+  await saveSongsToDB(files);
+  songs = files.map(f => f);
+  currentIndex = 0;
+  playSongFromBlob(songs[currentIndex]);
+  renderPlaylist(files.map(f => f.name));
+});
+
+// Restore playlist on load
+window.addEventListener('load', async () => {
+  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  if (order.length > 0) {
+    songs = await loadSongsFromDB();
+    if (songs.length > 0) {
+      currentIndex = 0;
+      playSongFromBlob(songs[currentIndex]);
+      renderPlaylist(order);
+    }
+  }
+});
+
 audioPlayer.addEventListener('ended', () => {
   currentIndex++;
   if (currentIndex < songs.length) {
-    playSong(currentIndex);
+    playSongFromBlob(songs[currentIndex]);
   }
 });
 
