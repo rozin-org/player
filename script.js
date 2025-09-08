@@ -68,27 +68,24 @@ function playSongFromBlob(blob) {
   highlightCurrent(currentIndex);
 }
 
-function renderPlaylist(names) {
+function renderPlaylist(order) {
   playlistEl.innerHTML = '';
-  names.forEach((name, i) => {
+  order.forEach((name, i) => {
     const li = document.createElement('li');
     li.textContent = name;
 
-    // Highlight current song
     if (i === currentIndex) li.classList.add('active');
 
-    // Play on click
     li.addEventListener('click', () => {
       currentIndex = i;
       playSongFromBlob(songs[currentIndex]);
     });
 
-    // Delete button
     const delBtn = document.createElement('button');
     delBtn.textContent = '🗑️';
     delBtn.style.marginLeft = '10px';
     delBtn.addEventListener('click', async (e) => {
-      e.stopPropagation(); // Prevent triggering play
+      e.stopPropagation();
       await removeSong(name);
     });
 
@@ -96,7 +93,6 @@ function renderPlaylist(names) {
     playlistEl.appendChild(li);
   });
 }
-
 
 function highlightCurrent(index) {
   const items = playlistEl.querySelectorAll('li');
@@ -112,12 +108,14 @@ fileInput.addEventListener('change', async () => {
   );
   if (newFiles.length === 0) return;
 
-  await saveSongsToDB(newFiles);
-  songs = await loadSongsFromDB();
+  //await new Promise(res => setTimeout(res, 100)); // 100ms delay
+  //songs = await loadSongsFromDB();
+  await saveSongsToDB(newFiles); // Add new songs to DB
+  songs = await loadSongsFromDB(); // Reload full playlist from DB
+  const updatedOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+
   currentIndex = 0;
   playSongFromBlob(songs[currentIndex]);
-
-  const updatedOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
   renderPlaylist(updatedOrder);
 });
 
