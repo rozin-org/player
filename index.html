@@ -2,34 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Play Now</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, audio { margin-top: 20px; width: 100%; }
-  </style>
+  <title>Play it Now</title>
 </head>
 <body>
-  <h2>Choose an MP3 file to play</h2>
-  <input type="file" id="audioFile" accept="audio/*">
+  <h2>Select MP3 files to play:</h2>
+  <input type="file" id="fileInput" accept="audio/mp3" multiple>
+  <br><br>
   <audio id="audioPlayer" controls></audio>
+  <ul id="playlist"></ul>
 
   <script>
-    const fileInput = document.getElementById('audioFile');
+    const fileInput = document.getElementById('fileInput');
     const audioPlayer = document.getElementById('audioPlayer');
+    const playlistEl = document.getElementById('playlist');
+    let songs = [];
+    let currentIndex = 0;
 
-    fileInput.addEventListener('change', function () {
-      const file = this.files[0];
-      if (file && file.type.startsWith('audio/')) {
-        const objectURL = URL.createObjectURL(file);
-        audioPlayer.src = objectURL;
+    fileInput.addEventListener('change', () => {
+      songs = Array.from(fileInput.files).filter(file => file.type === 'audio/mp3');
+      if (songs.length === 0) {
+        alert('No MP3 files selected.');
+        return;
+      }
+      currentIndex = 0;
+      playSong(currentIndex);
+      renderPlaylist();
+    });
 
-        // iOS requires user interaction to start playback
-        audioPlayer.load();
-        audioPlayer.play().catch(err => {
-          console.log('Playback prevented:', err);
-        });
-      } else {
-        alert('Please select a valid audio file.');
+    function playSong(index) {
+      const file = songs[index];
+      const url = URL.createObjectURL(file);
+      audioPlayer.src = url;
+      audioPlayer.play();
+    }
+
+    function renderPlaylist() {
+      playlistEl.innerHTML = '';
+      songs.forEach((song, i) => {
+        const li = document.createElement('li');
+        li.textContent = song.name;
+        if (i === currentIndex) li.style.fontWeight = 'bold';
+        playlistEl.appendChild(li);
+      });
+    }
+
+    audioPlayer.addEventListener('ended', () => {
+      currentIndex++;
+      if (currentIndex < songs.length) {
+        playSong(currentIndex);
+        renderPlaylist();
       }
     });
   </script>
