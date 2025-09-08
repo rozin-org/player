@@ -106,6 +106,25 @@ window.addEventListener('load', async () => {
     }
   }
 });
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  const db = await openDB();
+  const tx = db.transaction('songs', 'readwrite');
+  const store = tx.objectStore('songs');
+
+  // Clear all stored songs
+  store.clear();
+
+  // Clear playlist order metadata
+  localStorage.removeItem('playlistOrder');
+
+  // Reset UI
+  songs = [];
+  currentIndex = 0;
+  audioPlayer.src = '';
+  playlistEl.innerHTML = '';
+
+  alert('Playlist cleared!');
+});
 
 audioPlayer.addEventListener('ended', () => {
   currentIndex++;

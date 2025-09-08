@@ -55,6 +55,17 @@ ul#playlist li.active {
   font-weight: bold;
 }
 
+#clearBtn {
+  margin: 10px;
+  padding: 10px 20px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   ul#playlist li:hover {
     background-color: rgba(255, 255, 255, 0.2);
