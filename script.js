@@ -5,7 +5,6 @@ let songs = [];
 let currentIndex = 0;
 
 fileInput.addEventListener('change', () => {
-  var songs = [];
   console.log(fileInput.files);
   Array.from(fileInput.files).forEach(file => {
     console.log(file.name, file.type);
