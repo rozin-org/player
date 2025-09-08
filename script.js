@@ -4,19 +4,40 @@ const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
 
+// Restore playlist metadata on load
+window.addEventListener('load', () => {
+  const savedNames = JSON.parse(localStorage.getItem('playlistNames') || '[]');
+  if (savedNames.length > 0) {
+    alert('Welcome back! Please reselect your MP3 files to restore your playlist.');
+  }
+});
+
+// Handle file selection
 fileInput.addEventListener('change', () => {
+  const savedNames = JSON.parse(localStorage.getItem('playlistNames') || '[]');
   console.log(fileInput.files);
   Array.from(fileInput.files).forEach(file => {
     console.log(file.name, file.type);
     songs.push(file);
   });
   //songs = Array.from(fileInput.files).filter(file =>
-    //file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
+  //  file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
   //);
+
+  // Match reselected files to saved playlist
+  if (savedNames.length > 0) {
+    songs = songs.filter(file => savedNames.includes(file.name));
+  }
+
   if (songs.length === 0) {
-    alert('No MP3 files selected.');
+    alert('No valid songs files selected.');
     return;
   }
+
+  // Save playlist metadata
+  const fileNames = songs.map(file => file.name);
+  localStorage.setItem('playlistNames', JSON.stringify(fileNames));
+
   currentIndex = 0;
   playSong(currentIndex);
   renderPlaylist();
@@ -24,13 +45,16 @@ fileInput.addEventListener('change', () => {
 
 function playSong(index) {
   const file = songs[index];
+  if (!file) return;
+
   const url = URL.createObjectURL(file);
   audioPlayer.src = url;
-  audioPlayer.load(); // Important for iOS
+  audioPlayer.load();
   audioPlayer.play().catch(err => {
     console.warn('Playback blocked or failed:', err);
     alert('Tap the play button to start the song manually.');
   });
+
   highlightCurrent(index);
 }
 
