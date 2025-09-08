@@ -8,9 +8,19 @@ let currentIndex = 0;
 window.addEventListener('load', () => {
   const savedNames = JSON.parse(localStorage.getItem('playlistNames') || '[]');
   if (savedNames.length > 0) {
-    alert('Welcome back! Please reselect your MP3 files to restore your playlist.');
+    renderPlaceholderPlaylist(savedNames);
   }
 });
+// Show placeholder playlist before files are reselected
+function renderPlaceholderPlaylist(names) {
+  playlistEl.innerHTML = '';
+  names.forEach(name => {
+    const li = document.createElement('li');
+    li.textContent = name + ' (reselect to play)';
+    li.style.opacity = '0.6';
+    playlistEl.appendChild(li);
+  });
+}
 
 // Handle file selection
 fileInput.addEventListener('change', () => {
