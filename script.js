@@ -26,7 +26,11 @@ function playSong(index) {
   const file = songs[index];
   const url = URL.createObjectURL(file);
   audioPlayer.src = url;
-  audioPlayer.play();
+  audioPlayer.load(); // Important for iOS
+  audioPlayer.play().catch(err => {
+    console.warn('Playback blocked or failed:', err);
+    alert('Tap the play button to start the song manually.');
+  });
   highlightCurrent(index);
 }
 
