@@ -16,18 +16,24 @@ function openDB() {
     request.onerror = () => reject(request.error);
   });
 }
-
 async function saveSongsToDB(files) {
   const db = await openDB();
   const tx = db.transaction('songs', 'readwrite');
   const store = tx.objectStore('songs');
 
+  // Get existing playlist order
+  const existingOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  const newOrder = [...existingOrder];
+
   for (const file of files) {
-    await store.put({ name: file.name, blob: file });
+    if (!existingOrder.includes(file.name)) {
+      await store.put({ name: file.name, blob: file });
+      newOrder.push(file.name);
+    }
   }
 
   await tx.complete;
-  localStorage.setItem('playlistOrder', JSON.stringify(files.map(f => f.name)));
+  localStorage.setItem('playlistOrder', JSON.stringify(newOrder));
 }
 
 async function loadSongsFromDB() {
@@ -65,13 +71,30 @@ function renderPlaylist(names) {
   names.forEach((name, i) => {
     const li = document.createElement('li');
     li.textContent = name;
+
+    // Highlight current song
+    if (i === currentIndex) li.classList.add('active');
+
+    // Play on click
     li.addEventListener('click', () => {
       currentIndex = i;
       playSongFromBlob(songs[currentIndex]);
     });
+
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑️';
+    delBtn.style.marginLeft = '10px';
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation(); // Prevent triggering play
+      await removeSong(name);
+    });
+
+    li.appendChild(delBtn);
     playlistEl.appendChild(li);
   });
 }
+
 
 function highlightCurrent(index) {
   const items = playlistEl.querySelectorAll('li');
@@ -106,6 +129,7 @@ window.addEventListener('load', async () => {
     }
   }
 });
+
 document.getElementById('clearBtn').addEventListener('click', async () => {
   const db = await openDB();
   const tx = db.transaction('songs', 'readwrite');
@@ -132,6 +156,27 @@ audioPlayer.addEventListener('ended', () => {
     playSongFromBlob(songs[currentIndex]);
   }
 });
+
+async function removeSong(name) {
+  const db = await openDB();
+  const tx = db.transaction('songs', 'readwrite');
+  const store = tx.objectStore('songs');
+  await store.delete(name);
+  await tx.complete;
+
+  // Update localStorage
+  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  const newOrder = order.filter(n => n !== name);
+  localStorage.setItem('playlistOrder', JSON.stringify(newOrder));
+
+  // Update songs array
+  songs = songs.filter((blob, i) => order[i] !== name);
+  currentIndex = 0;
+
+  renderPlaylist(newOrder);
+  audioPlayer.src = '';
+}
+
 
 // Register service worker
 if ('serviceWorker' in navigator) {
