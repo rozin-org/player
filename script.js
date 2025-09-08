@@ -5,7 +5,15 @@ let songs = [];
 let currentIndex = 0;
 
 fileInput.addEventListener('change', () => {
-  songs = Array.from(fileInput.files).filter(file => file.type === 'audio/mp3');
+  var songs = [];
+  console.log(fileInput.files);
+  Array.from(fileInput.files).forEach(file => {
+    console.log(file.name, file.type);
+    songs.push(file);
+  });
+  //songs = Array.from(fileInput.files).filter(file =>
+    //file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
+  //);
   if (songs.length === 0) {
     alert('No MP3 files selected.');
     return;
