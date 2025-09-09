@@ -24,3 +24,12 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+self.addEventListener('install', event => {
+  self.skipWaiting(); // activate immediately
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(clients.claim()); // take control of all pages
+});
+

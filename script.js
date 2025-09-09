@@ -3,6 +3,7 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
+const CACHE_NAME = 'play-it-now-v1.0.5'; // bump version
 
 // IndexedDB setup
 function openDB() {
@@ -18,24 +19,25 @@ function openDB() {
 }
 async function saveSongsToDB(newFiles) {
   const db = await openDB();
-  const tx = db.transaction('songs', 'readwrite');
-  const store = tx.objectStore('songs');
-
-  // Get existing playlist order
   const existingOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
   const updatedOrder = [...existingOrder];
 
   for (const file of newFiles) {
-    const alreadyExists = existingOrder.includes(file.name);
-    if (!alreadyExists) {
-      await store.put({ name: file.name, blob: file });
+    if (!existingOrder.includes(file.name)) {
+      const tx = db.transaction('songs', 'readwrite');
+      const store = tx.objectStore('songs');
+      await new Promise((res, rej) => {
+        const req = store.put({ name: file.name, blob: file });
+        req.onsuccess = () => res();
+        req.onerror = () => rej(req.error);
+      });
       updatedOrder.push(file.name);
     }
   }
 
-  await tx.complete;
   localStorage.setItem('playlistOrder', JSON.stringify(updatedOrder));
 }
+
 
 async function loadSongsFromDB() {
   const db = await openDB();
@@ -113,6 +115,12 @@ fileInput.addEventListener('change', async () => {
 
   await saveSongsToDB(newFiles);
 
+  await new Promise(res => setTimeout(res, 150)); // iOS needs time to flush
+
+  const { blobs, names } = await loadSongsFromDB();
+  songs = blobs;
+  renderPlaylist(names);
+
   // Wait briefly to ensure iOS commits the transaction
   await new Promise(res => setTimeout(res, 100));
 
@@ -186,10 +194,16 @@ async function removeSong(name) {
   audioPlayer.src = '';
 }
 
-
 // Register service worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
-    .then(reg => console.log('Service Worker registered:', reg))
-    .catch(err => console.error('Service Worker registration failed:', err));
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.onupdatefound = () => {
+      const newWorker = reg.installing;
+      newWorker.onstatechange = () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          alert('New version available! Please reload.');
+        }
+      };
+    };
+  });
 }
