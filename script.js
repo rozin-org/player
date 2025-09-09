@@ -3,7 +3,7 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
-const CACHE_NAME = 'play-it-now-v1.0.6'; // bump version
+const CACHE_NAME = 'play-it-now-v1.0.7'; // bump version
 
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -57,15 +57,13 @@ function renderPlaylist(order) {
   playlistEl.innerHTML = '';
   order.forEach((name, i) => {
     const li = document.createElement('li');
-    li.textContent = name;
-
     if (i === currentIndex) li.classList.add('active');
 
-    li.addEventListener('click', () => {
-      currentIndex = i;
-      playSongFromBlob(songs[currentIndex]);
-    });
+    // Create a span for the song name
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = name;
 
+    // Create the delete button
     const delBtn = document.createElement('button');
     delBtn.textContent = '🗑️';
     delBtn.style.marginLeft = '10px';
@@ -74,6 +72,14 @@ function renderPlaylist(order) {
       await removeSong(name);
     });
 
+    // Add click to the whole list item
+    li.addEventListener('click', () => {
+      currentIndex = i;
+      playSongFromBlob(songs[currentIndex]);
+    });
+
+    // Append name and button side by side
+    li.appendChild(nameSpan);
     li.appendChild(delBtn);
     playlistEl.appendChild(li);
   });
@@ -106,6 +112,7 @@ fileInput.addEventListener('change', async () => {
     playSongFromBlob(songs[currentIndex]);
     renderPlaylist(names);
   }
+  fileInput.value = ''; // clears the visible file name
 });
 
 // ✅ Restore playlist on load

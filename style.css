@@ -27,6 +27,14 @@ input[type="file"] {
   max-width: 300px;
 }
 
+.file-label {
+  background-color: #fff;
+  color: #333;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
 audio {
   width: 100%;
   max-width: 400px;
@@ -72,3 +80,4 @@ ul#playlist li.active {
     cursor: pointer;
   }
 }
+
