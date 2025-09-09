@@ -3,7 +3,7 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
-const CACHE_NAME = 'play-it-now-v1.0.7'; // bump version
+const CACHE_NAME = 'play-it-now-v1.0.8'; // bump version
 
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -55,15 +55,30 @@ function playSongFromBlob(blob) {
 
 function renderPlaylist(order) {
   playlistEl.innerHTML = '';
+
+  const table = document.createElement('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+
   order.forEach((name, i) => {
-    const li = document.createElement('li');
-    if (i === currentIndex) li.classList.add('active');
+    const row = document.createElement('tr');
+    if (i === currentIndex) row.classList.add('active');
 
-    // Create a span for the song name
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = name;
+    // Song name cell
+    const nameCell = document.createElement('td');
+    nameCell.textContent = name;
+    nameCell.style.padding = '10px';
+    nameCell.style.cursor = 'pointer';
+    nameCell.addEventListener('click', () => {
+      currentIndex = i;
+      playSongFromBlob(songs[currentIndex]);
+    });
 
-    // Create the delete button
+    // Delete button cell
+    const delCell = document.createElement('td');
+    delCell.style.textAlign = 'right';
+    delCell.style.padding = '10px';
+
     const delBtn = document.createElement('button');
     delBtn.textContent = '🗑️';
     delBtn.style.marginLeft = '10px';
@@ -72,17 +87,13 @@ function renderPlaylist(order) {
       await removeSong(name);
     });
 
-    // Add click to the whole list item
-    li.addEventListener('click', () => {
-      currentIndex = i;
-      playSongFromBlob(songs[currentIndex]);
-    });
-
-    // Append name and button side by side
-    li.appendChild(nameSpan);
-    li.appendChild(delBtn);
-    playlistEl.appendChild(li);
+    delCell.appendChild(delBtn);
+    row.appendChild(nameCell);
+    row.appendChild(delCell);
+    table.appendChild(row);
   });
+
+  playlistEl.appendChild(table);
 }
 
 function highlightCurrent(index) {
