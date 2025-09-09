@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Play it Now v1.0.5</title>
+  <title>Play it Now v1.0.6</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#2a5298">
   <link rel="manifest" href="manifest.json">
@@ -10,12 +10,13 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-  <h2>🎶 Play it Now</h2><p>v1.0.5</p>
+  <h2>🎶 Play it Now</h2><p>v1.0.6</p>
   <input type="file" id="fileInput" accept="audio/mp3" multiple>
   <button id="clearBtn">🗑️ Clear Playlist</button>
   <audio id="audioPlayer" controls></audio>
   <ul id="playlist"></ul>
 
+  <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.2/dist/dexie.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

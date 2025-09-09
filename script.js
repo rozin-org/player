@@ -3,34 +3,22 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
-const CACHE_NAME = 'play-it-now-v1.0.5'; // bump version
+const CACHE_NAME = 'play-it-now-v1.0.6'; // bump version
 
-// IndexedDB setup
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('PlayItNowDB', 1);
-    request.onupgradeneeded = event => {
-      const db = event.target.result;
-      db.createObjectStore('songs', { keyPath: 'name' });
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
+// ✅ Dexie setup
+const db = new Dexie('PlayItNowDB');
+db.version(1).stores({
+  songs: 'name'
+});
+
+// ✅ Save songs to Dexie
 async function saveSongsToDB(newFiles) {
-  const db = await openDB();
   const existingOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
   const updatedOrder = [...existingOrder];
 
   for (const file of newFiles) {
     if (!existingOrder.includes(file.name)) {
-      const tx = db.transaction('songs', 'readwrite');
-      const store = tx.objectStore('songs');
-      await new Promise((res, rej) => {
-        const req = store.put({ name: file.name, blob: file });
-        req.onsuccess = () => res();
-        req.onerror = () => rej(req.error);
-      });
+      await db.songs.put({ name: file.name, blob: file });
       updatedOrder.push(file.name);
     }
   }
@@ -38,24 +26,16 @@ async function saveSongsToDB(newFiles) {
   localStorage.setItem('playlistOrder', JSON.stringify(updatedOrder));
 }
 
-
+// ✅ Load songs from Dexie
 async function loadSongsFromDB() {
-  const db = await openDB();
-  const tx = db.transaction('songs', 'readonly');
-  const store = tx.objectStore('songs');
-
   const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
   const blobs = [];
   const names = [];
 
   for (const name of order) {
-    const request = store.get(name);
-    const result = await new Promise((res, rej) => {
-      request.onsuccess = () => res(request.result);
-      request.onerror = () => rej(request.error);
-    });
-    if (result && result.blob) {
-      blobs.push(result.blob);
+    const entry = await db.songs.get(name);
+    if (entry && entry.blob) {
+      blobs.push(entry.blob);
       names.push(name);
     }
   }
@@ -106,7 +86,7 @@ function highlightCurrent(index) {
   });
 }
 
-// File selection
+// ✅ File selection
 fileInput.addEventListener('change', async () => {
   const newFiles = Array.from(fileInput.files).filter(file =>
     file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.mp3')
@@ -114,28 +94,21 @@ fileInput.addEventListener('change', async () => {
   if (newFiles.length === 0) return;
 
   await saveSongsToDB(newFiles);
-
   await new Promise(res => setTimeout(res, 150)); // iOS needs time to flush
 
   const { blobs, names } = await loadSongsFromDB();
-  songs = blobs;
-  renderPlaylist(names);
-
-  // Wait briefly to ensure iOS commits the transaction
-  await new Promise(res => setTimeout(res, 100));
-
-  const { blobs, names } = await loadSongsFromDB();
+  if (blobs.length === 0) {
+    alert("iOS may not have committed the files. Try reselecting or refreshing.");
+  }
   songs = blobs;
   currentIndex = 0;
-
   if (songs.length > 0) {
     playSongFromBlob(songs[currentIndex]);
     renderPlaylist(names);
   }
 });
 
-
-// Restore playlist on load
+// ✅ Restore playlist on load
 window.addEventListener('load', async () => {
   const { blobs, names } = await loadSongsFromDB();
   if (blobs.length > 0) {
@@ -146,19 +119,11 @@ window.addEventListener('load', async () => {
   }
 });
 
-
+// ✅ Clear playlist
 document.getElementById('clearBtn').addEventListener('click', async () => {
-  const db = await openDB();
-  const tx = db.transaction('songs', 'readwrite');
-  const store = tx.objectStore('songs');
-
-  // Clear all stored songs
-  store.clear();
-
-  // Clear playlist order metadata
+  await db.songs.clear();
   localStorage.removeItem('playlistOrder');
 
-  // Reset UI
   songs = [];
   currentIndex = 0;
   audioPlayer.src = '';
@@ -167,6 +132,23 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
   alert('Playlist cleared!');
 });
 
+// ✅ Remove single song
+async function removeSong(name) {
+  await db.songs.delete(name);
+
+  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  const newOrder = order.filter(n => n !== name);
+  localStorage.setItem('playlistOrder', JSON.stringify(newOrder));
+
+  const { blobs } = await loadSongsFromDB();
+  songs = blobs;
+  currentIndex = 0;
+
+  renderPlaylist(newOrder);
+  audioPlayer.src = '';
+}
+
+// ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
   currentIndex++;
   if (currentIndex < songs.length) {
@@ -174,27 +156,7 @@ audioPlayer.addEventListener('ended', () => {
   }
 });
 
-async function removeSong(name) {
-  const db = await openDB();
-  const tx = db.transaction('songs', 'readwrite');
-  const store = tx.objectStore('songs');
-  await store.delete(name);
-  await tx.complete;
-
-  // Update localStorage
-  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
-  const newOrder = order.filter(n => n !== name);
-  localStorage.setItem('playlistOrder', JSON.stringify(newOrder));
-
-  // Update songs array
-  songs = songs.filter((blob, i) => order[i] !== name);
-  currentIndex = 0;
-
-  renderPlaylist(newOrder);
-  audioPlayer.src = '';
-}
-
-// Register service worker
+// ✅ Service worker update prompt
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
     reg.onupdatefound = () => {
