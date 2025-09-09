@@ -37,14 +37,14 @@ async function saveSongsToDB(newFiles) {
   localStorage.setItem('playlistOrder', JSON.stringify(updatedOrder));
 }
 
-
 async function loadSongsFromDB() {
   const db = await openDB();
   const tx = db.transaction('songs', 'readonly');
   const store = tx.objectStore('songs');
 
   const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
-  const songs = [];
+  const blobs = [];
+  const names = [];
 
   for (const name of order) {
     const request = store.get(name);
@@ -52,10 +52,13 @@ async function loadSongsFromDB() {
       request.onsuccess = () => res(request.result);
       request.onerror = () => rej(request.error);
     });
-    if (result) songs.push(result.blob);
+    if (result && result.blob) {
+      blobs.push(result.blob);
+      names.push(name);
+    }
   }
 
-  return songs;
+  return { blobs, names };
 }
 
 function playSongFromBlob(blob) {
@@ -108,30 +111,33 @@ fileInput.addEventListener('change', async () => {
   );
   if (newFiles.length === 0) return;
 
-  //await new Promise(res => setTimeout(res, 100)); // 100ms delay
-  //songs = await loadSongsFromDB();
-  await saveSongsToDB(newFiles); // Add new songs to DB
-  songs = await loadSongsFromDB(); // Reload full playlist from DB
-  const updatedOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
+  await saveSongsToDB(newFiles);
 
+  // Wait briefly to ensure iOS commits the transaction
+  await new Promise(res => setTimeout(res, 100));
+
+  const { blobs, names } = await loadSongsFromDB();
+  songs = blobs;
   currentIndex = 0;
-  playSongFromBlob(songs[currentIndex]);
-  renderPlaylist(updatedOrder);
+
+  if (songs.length > 0) {
+    playSongFromBlob(songs[currentIndex]);
+    renderPlaylist(names);
+  }
 });
 
 
 // Restore playlist on load
 window.addEventListener('load', async () => {
-  const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
-  if (order.length > 0) {
-    songs = await loadSongsFromDB();
-    if (songs.length > 0) {
-      currentIndex = 0;
-      playSongFromBlob(songs[currentIndex]);
-      renderPlaylist(order);
-    }
+  const { blobs, names } = await loadSongsFromDB();
+  if (blobs.length > 0) {
+    songs = blobs;
+    currentIndex = 0;
+    playSongFromBlob(songs[currentIndex]);
+    renderPlaylist(names);
   }
 });
+
 
 document.getElementById('clearBtn').addEventListener('click', async () => {
   const db = await openDB();
