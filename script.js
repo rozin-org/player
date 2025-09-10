@@ -3,7 +3,7 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
-const CACHE_NAME = 'play-it-now-v1.0.8'; // bump version
+const CACHE_NAME = 'play-it-now-v1.0.9'; // bump version
 
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -50,7 +50,7 @@ function playSongFromBlob(blob) {
   audioPlayer.play().catch(err => {
     console.warn('Playback failed:', err);
   });
-  highlightCurrent(currentIndex);
+  highlightCurrent(currentIndex); // Highlight the currently playing song
 }
 
 function renderPlaylist(order) {
@@ -72,6 +72,7 @@ function renderPlaylist(order) {
     nameCell.addEventListener('click', () => {
       currentIndex = i;
       playSongFromBlob(songs[currentIndex]);
+      highlightCurrent(currentIndex); // Highlight the selected song
     });
 
     // Delete button cell
@@ -97,9 +98,9 @@ function renderPlaylist(order) {
 }
 
 function highlightCurrent(index) {
-  const items = playlistEl.querySelectorAll('li');
-  items.forEach((li, i) => {
-    li.classList.toggle('active', i === index);
+  const rows = playlistEl.querySelectorAll('tr');
+  rows.forEach((row, i) => {
+    row.classList.toggle('active', i === index); // Mark the playing song
   });
 }
 
@@ -166,9 +167,39 @@ async function removeSong(name) {
   audioPlayer.src = '';
 }
 
+// ✅ Shuffle songs
+let isShuffle = false;
+
+async function shuffleSongs() {
+  for (let i = songs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [songs[i], songs[j]] = [songs[j], songs[i]];
+  }
+  const { names } = await loadSongsFromDB(); // Keep original names
+  renderPlaylist(names); // Display original names in shuffled order
+}
+
+// ✅ Toggle shuffle mode
+document.getElementById('shuffleBtn').addEventListener('click', async () => {
+  isShuffle = !isShuffle;
+  if (isShuffle) {
+    shuffleSongs();
+    alert('Shuffle mode enabled!');
+  } else {
+    alert('Shuffle mode disabled!');
+    const { names } = await loadSongsFromDB(); // Reload names from local DB
+    renderPlaylist(names); // Display original names
+  }
+});
+
 // ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
-  currentIndex++;
+  if (isShuffle) {
+    currentIndex = Math.floor(Math.random() * songs.length);
+  } else {
+    currentIndex++;
+  }
+
   if (currentIndex < songs.length) {
     playSongFromBlob(songs[currentIndex]);
   }
