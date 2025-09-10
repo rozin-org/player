@@ -3,14 +3,17 @@ const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
-const CACHE_NAME = 'play-it-now-v1.0.9'; // bump version
-
+let isShuffle = false;
+// ===========================================================
+// ✅ Service worker cache version
+const CACHE_NAME = 'play-it-now-v1.0.10'; // bump version
+// ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
 db.version(1).stores({
   songs: 'name'
 });
-
+// ===========================================================
 // ✅ Save songs to Dexie
 async function saveSongsToDB(newFiles) {
   const existingOrder = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
@@ -25,7 +28,7 @@ async function saveSongsToDB(newFiles) {
 
   localStorage.setItem('playlistOrder', JSON.stringify(updatedOrder));
 }
-
+// ===========================================================
 // ✅ Load songs from Dexie
 async function loadSongsFromDB() {
   const order = JSON.parse(localStorage.getItem('playlistOrder') || '[]');
@@ -42,7 +45,8 @@ async function loadSongsFromDB() {
 
   return { blobs, names };
 }
-
+// ===========================================================
+// ✅ Play song from Blob
 function playSongFromBlob(blob) {
   const url = URL.createObjectURL(blob);
   audioPlayer.src = url;
@@ -52,7 +56,8 @@ function playSongFromBlob(blob) {
   });
   highlightCurrent(currentIndex); // Highlight the currently playing song
 }
-
+// ===========================================================
+// ✅ Render playlist
 function renderPlaylist(order) {
   playlistEl.innerHTML = '';
 
@@ -62,7 +67,7 @@ function renderPlaylist(order) {
 
   order.forEach((name, i) => {
     const row = document.createElement('tr');
-    if (i === currentIndex) row.classList.add('active');
+    //if (i === currentIndex) row.classList.add('active');
 
     // Song name cell
     const nameCell = document.createElement('td');
@@ -72,7 +77,6 @@ function renderPlaylist(order) {
     nameCell.addEventListener('click', () => {
       currentIndex = i;
       playSongFromBlob(songs[currentIndex]);
-      highlightCurrent(currentIndex); // Highlight the selected song
     });
 
     // Delete button cell
@@ -96,14 +100,15 @@ function renderPlaylist(order) {
 
   playlistEl.appendChild(table);
 }
-
+// ===========================================================
+// ✅ Highlight current song
 function highlightCurrent(index) {
   const rows = playlistEl.querySelectorAll('tr');
   rows.forEach((row, i) => {
     row.classList.toggle('active', i === index); // Mark the playing song
   });
 }
-
+// ===========================================================
 // ✅ File selection
 fileInput.addEventListener('change', async () => {
   const newFiles = Array.from(fileInput.files).filter(file =>
@@ -119,25 +124,31 @@ fileInput.addEventListener('change', async () => {
     alert("iOS may not have committed the files. Try reselecting or refreshing.");
   }
   songs = blobs;
-  currentIndex = 0;
+  //currentIndex = 0;
+  if (currentIndex >= songs.length) {
+    currentIndex = 0;
+  }
   if (songs.length > 0) {
-    playSongFromBlob(songs[currentIndex]);
     renderPlaylist(names);
+    playSongFromBlob(songs[currentIndex]);
   }
   fileInput.value = ''; // clears the visible file name
 });
-
+// ===========================================================
 // ✅ Restore playlist on load
 window.addEventListener('load', async () => {
   const { blobs, names } = await loadSongsFromDB();
   if (blobs.length > 0) {
     songs = blobs;
-    currentIndex = 0;
-    playSongFromBlob(songs[currentIndex]);
+    //currentIndex = 0;
+    if (currentIndex >= songs.length) {
+      currentIndex = 0;
+    }
     renderPlaylist(names);
+    playSongFromBlob(songs[currentIndex]);
   }
 });
-
+// ===========================================================
 // ✅ Clear playlist
 document.getElementById('clearBtn').addEventListener('click', async () => {
   await db.songs.clear();
@@ -150,7 +161,7 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
 
   alert('Playlist cleared!');
 });
-
+// ===========================================================
 // ✅ Remove single song
 async function removeSong(name) {
   await db.songs.delete(name);
@@ -161,50 +172,43 @@ async function removeSong(name) {
 
   const { blobs } = await loadSongsFromDB();
   songs = blobs;
-  currentIndex = 0;
+  //currentIndex = 0;
 
   renderPlaylist(newOrder);
-  audioPlayer.src = '';
-}
-
-// ✅ Shuffle songs
-let isShuffle = false;
-
-async function shuffleSongs() {
-  for (let i = songs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [songs[i], songs[j]] = [songs[j], songs[i]];
+  if (currentIndex >= songs.length) {
+    currentIndex = 0;
   }
-  const { names } = await loadSongsFromDB(); // Keep original names
-  renderPlaylist(names); // Display original names in shuffled order
+  playSongFromBlob(songs[currentIndex]);
 }
 
+// ===========================================================
 // ✅ Toggle shuffle mode
 document.getElementById('shuffleBtn').addEventListener('click', async () => {
   isShuffle = !isShuffle;
   if (isShuffle) {
-    shuffleSongs();
-    alert('Shuffle mode enabled!');
+    document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle On';
+  
   } else {
-    alert('Shuffle mode disabled!');
-    const { names } = await loadSongsFromDB(); // Reload names from local DB
-    renderPlaylist(names); // Display original names
+    document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle Off';
+    
   }
 });
-
+// ===========================================================
 // ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
   if (isShuffle) {
     currentIndex = Math.floor(Math.random() * songs.length);
-  } else {
+  } 
+  else {
     currentIndex++;
   }
 
-  if (currentIndex < songs.length) {
-    playSongFromBlob(songs[currentIndex]);
+  if (currentIndex >= songs.length) {
+    currentIndex = 0;
   }
+   playSongFromBlob(songs[currentIndex]);
 });
-
+// ===========================================================
 // ✅ Service worker update prompt
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
