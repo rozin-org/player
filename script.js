@@ -6,7 +6,7 @@ let currentIndex = 0;
 let isShuffle = false;
 // ===========================================================
 // ✅ Service worker cache version
-const CACHE_NAME = 'play-it-now-v1.0.10'; // bump version
+const CACHE_NAME = 'play-it-now-v1.0.11'; // bump version
 // ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -77,6 +77,7 @@ function renderPlaylist(order) {
     nameCell.addEventListener('click', () => {
       currentIndex = i;
       playSongFromBlob(songs[currentIndex]);
+      saveStateToDB();
     });
 
     // Delete button cell
@@ -109,6 +110,24 @@ function highlightCurrent(index) {
   });
 }
 // ===========================================================
+// ✅ Save currentIndex and shuffle state to localStorage
+function saveStateToDB() {
+  localStorage.setItem('currentIndex', currentIndex);
+  localStorage.setItem('isShuffle', isShuffle);
+}
+
+// ===========================================================
+// ✅ Load currentIndex and shuffle state from localStorage
+function loadStateFromDB() {
+  currentIndex = parseInt(localStorage.getItem('currentIndex') || '0', 10);
+  isShuffle = localStorage.getItem('isShuffle') === 'true';
+  if (isShuffle) {
+    document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle On';
+  } else {
+    document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle Off';
+  }
+}
+// ===========================================================
 // ✅ File selection
 fileInput.addEventListener('change', async () => {
   const newFiles = Array.from(fileInput.files).filter(file =>
@@ -124,7 +143,6 @@ fileInput.addEventListener('change', async () => {
     alert("iOS may not have committed the files. Try reselecting or refreshing.");
   }
   songs = blobs;
-  //currentIndex = 0;
   if (currentIndex >= songs.length) {
     currentIndex = 0;
   }
@@ -133,16 +151,19 @@ fileInput.addEventListener('change', async () => {
     playSongFromBlob(songs[currentIndex]);
   }
   fileInput.value = ''; // clears the visible file name
+  saveStateToDB();
 });
 // ===========================================================
 // ✅ Restore playlist on load
 window.addEventListener('load', async () => {
+  loadStateFromDB();
   const { blobs, names } = await loadSongsFromDB();
   if (blobs.length > 0) {
     songs = blobs;
-    //currentIndex = 0;
     if (currentIndex >= songs.length) {
       currentIndex = 0;
+      saveStateToDB();
+
     }
     renderPlaylist(names);
     playSongFromBlob(songs[currentIndex]);
@@ -172,13 +193,14 @@ async function removeSong(name) {
 
   const { blobs } = await loadSongsFromDB();
   songs = blobs;
-  //currentIndex = 0;
 
   renderPlaylist(newOrder);
   if (currentIndex >= songs.length) {
     currentIndex = 0;
   }
   playSongFromBlob(songs[currentIndex]);
+  saveStateToDB();
+
 }
 
 // ===========================================================
@@ -187,26 +209,25 @@ document.getElementById('shuffleBtn').addEventListener('click', async () => {
   isShuffle = !isShuffle;
   if (isShuffle) {
     document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle On';
-  
   } else {
     document.getElementById('shuffleBtn').innerHTML = '🔀 Shuffle Off';
-    
   }
+  saveStateToDB();
 });
 // ===========================================================
 // ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
   if (isShuffle) {
     currentIndex = Math.floor(Math.random() * songs.length);
-  } 
-  else {
+  } else {
     currentIndex++;
   }
 
   if (currentIndex >= songs.length) {
     currentIndex = 0;
   }
-   playSongFromBlob(songs[currentIndex]);
+  playSongFromBlob(songs[currentIndex]);
+  saveStateToDB();
 });
 // ===========================================================
 // ✅ Service worker update prompt
