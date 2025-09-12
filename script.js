@@ -6,8 +6,8 @@ let currentIndex = 0;
 let isShuffle = false;
 // ===========================================================
 // ✅ Service worker cache version
-const CACHE_NAME = 'play-it-now-v1.0.15'; // bump version
-const CURRENT_VERSION = '1.0.15';
+const CACHE_NAME = 'play-it-now-v1.0.16'; // bump version
+const CURRENT_VERSION = '1.0.16';
 // ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
