@@ -6,8 +6,8 @@ let currentIndex = 0;
 let isShuffle = false;
 // ===========================================================
 // ✅ Service worker cache version
-const CACHE_NAME = 'play-it-now-v1.0.14'; // bump version
-const CURRENT_VERSION = '1.0.14';
+const CACHE_NAME = 'play-it-now-v1.0.15'; // bump version
+const CURRENT_VERSION = '1.0.15';
 // ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -266,18 +266,24 @@ function isNewerVersion(latest, current) {
 // ===========================================================
 // ✅ Service worker update prompt
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(reg => {
+  navigator.serviceWorker.register('sw.js',{updateViaCache: 'none'}).then(reg => {
     reg.onupdatefound = () => {
       const newWorker = reg.installing;
       newWorker.onstatechange = () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          alert('New version available! Please reload.');
+          const confirmed = confirm('New version available! Reload to update?');
+          if (confirmed) {
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
         }
       };
     };
   });
-  
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    window.location.reload();
-  });
+    // Force reload with cache-busting query
+    location.href = location.origin + location.pathname + '?v=' + Date.now();
+  });  
+  //navigator.serviceWorker.addEventListener('controllerchange', () => {
+  //  window.location.reload();
+  //});
 }
