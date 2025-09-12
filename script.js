@@ -7,6 +7,7 @@ let isShuffle = false;
 // ===========================================================
 // ✅ Service worker cache version
 const CACHE_NAME = 'play-it-now-v1.0.11'; // bump version
+cconst CURRENT_VERSION = '1.0.11';
 // ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -156,6 +157,7 @@ fileInput.addEventListener('change', async () => {
 // ===========================================================
 // ✅ Restore playlist on load
 window.addEventListener('load', async () => {
+  checkForUpdate();
   loadStateFromDB();
   const { blobs, names } = await loadSongsFromDB();
   if (blobs.length > 0) {
@@ -169,6 +171,7 @@ window.addEventListener('load', async () => {
     playSongFromBlob(songs[currentIndex]);
   }
 });
+
 // ===========================================================
 // ✅ Clear playlist
 document.getElementById('clearBtn').addEventListener('click', async () => {
@@ -229,6 +232,37 @@ audioPlayer.addEventListener('ended', () => {
   playSongFromBlob(songs[currentIndex]);
   saveStateToDB();
 });
+
+// ===========================================================
+async function checkForUpdate() {
+  try {
+    const response = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
+    const data = await response.json();
+    const latestVersion = data.version;
+
+    if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      const confirmed = confirm(`A new version (${latestVersion}) is available. Reload to update?`);
+      if (confirmed) {
+        // Tell the service worker to skip waiting and activate
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Version check failed:', err);
+  }
+}
+// ===========================================================
+function isNewerVersion(latest, current) {
+  const l = latest.split('.').map(Number);
+  const c = current.split('.').map(Number);
+  for (let i = 0; i < l.length; i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
+}
 // ===========================================================
 // ✅ Service worker update prompt
 if ('serviceWorker' in navigator) {
@@ -241,5 +275,9 @@ if ('serviceWorker' in navigator) {
         }
       };
     };
+  });
+  
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
   });
 }
