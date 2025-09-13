@@ -1,4 +1,4 @@
-const CACHE_NAME = 'play-it-now-v3';
+const CACHE_NAME = 'play-it-now-v4';
 const urlsToCache = [
   'index.html',
   'style.css',
