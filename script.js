@@ -6,7 +6,6 @@ let currentIndex = 0;
 let isShuffle = false;
 // ===========================================================
 // ✅ Service worker cache version
-const CACHE_NAME = 'play-it-now-v1.0.16'; // bump version
 const CURRENT_VERSION = '1.0.16';
 // ===========================================================
 // ✅ Dexie setup
@@ -157,7 +156,8 @@ fileInput.addEventListener('change', async () => {
 // ===========================================================
 // ✅ Restore playlist on load
 window.addEventListener('load', async () => {
-  checkForUpdate();
+  //checkForUpdate();
+  updateVersionTag();
   loadStateFromDB();
   const { blobs, names } = await loadSongsFromDB();
   if (blobs.length > 0) {
@@ -234,6 +234,21 @@ audioPlayer.addEventListener('ended', () => {
 });
 
 // ===========================================================
+function updateVersionTag(){
+  try{
+      const response = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
+      const data = await response.json();
+      const version = data.version || 'unknown';
+      document.getElementById('versionDisplay').textContent = `v${version}`;
+      document.title = `Play it Now v${version}`;
+  }
+  catch (err) {
+    console.warn('Failed to load version:', err);
+    document.getElementById('versionDisplay').textContent = 'v?';
+  }
+}
+// ===========================================================
+
 async function checkForUpdate() {
   try {
     const response = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
@@ -271,6 +286,30 @@ if ('serviceWorker' in navigator) {
       const newWorker = reg.installing;
       newWorker.onstatechange = () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          //const confirmed = confirm('New version available! Reload to update?');
+          //if (confirmed) {
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          //}
+        }
+      };
+    };
+  });
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.getRegistration().then(reg => {
+    reg.update(); // manually check for a new SW
+  });
+}
+/*
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js',{updateViaCache: 'none'}).then(reg => {
+    reg.onupdatefound = () => {
+      const newWorker = reg.installing;
+      newWorker.onstatechange = () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           const confirmed = confirm('New version available! Reload to update?');
           if (confirmed) {
             newWorker.postMessage({ type: 'SKIP_WAITING' });
@@ -287,3 +326,4 @@ if ('serviceWorker' in navigator) {
   //  window.location.reload();
   //});
 }
+*/
