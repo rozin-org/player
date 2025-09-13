@@ -234,7 +234,7 @@ audioPlayer.addEventListener('ended', () => {
 });
 
 // ===========================================================
-function updateVersionTag(){
+async function updateVersionTag(){
   try{
       const response = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
       const data = await response.json();
