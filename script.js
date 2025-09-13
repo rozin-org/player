@@ -4,9 +4,7 @@ const playlistEl = document.getElementById('playlist');
 let songs = [];
 let currentIndex = 0;
 let isShuffle = false;
-// ===========================================================
-// ✅ Service worker cache version
-const CURRENT_VERSION = '1.0.16';
+
 // ===========================================================
 // ✅ Dexie setup
 const db = new Dexie('PlayItNowDB');
@@ -156,7 +154,6 @@ fileInput.addEventListener('change', async () => {
 // ===========================================================
 // ✅ Restore playlist on load
 window.addEventListener('load', async () => {
-  //checkForUpdate();
   updateVersionTag();
   loadStateFromDB();
   const { blobs, names } = await loadSongsFromDB();
@@ -245,27 +242,6 @@ async function updateVersionTag(){
   catch (err) {
     console.warn('Failed to load version:', err);
     document.getElementById('versionDisplay').textContent = 'v?';
-  }
-}
-// ===========================================================
-
-async function checkForUpdate() {
-  try {
-    const response = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
-    const data = await response.json();
-    const latestVersion = data.version;
-
-    if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
-      const confirmed = confirm(`A new version (${latestVersion}) is available. Reload to update?`);
-      if (confirmed) {
-        // Tell the service worker to skip waiting and activate
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Version check failed:', err);
   }
 }
 // ===========================================================
