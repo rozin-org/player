@@ -143,6 +143,9 @@ function highlightCurrent(index) {
         { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
     });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      document.getElementById('nextBtn').click();
+    });
   }
 }
 // ===========================================================
