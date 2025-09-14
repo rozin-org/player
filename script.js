@@ -106,6 +106,7 @@ function highlightCurrent(index) {
   rows.forEach((row, i) => {
     row.classList.toggle('active', i === index); // Mark the playing song
   });
+  document.getElementById("now_playing").innerHTML = songs[index].name;
 }
 // ===========================================================
 // ✅ Save currentIndex and shuffle state to localStorage
