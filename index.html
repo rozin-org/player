@@ -10,7 +10,8 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-  <h2>🎶 Play it Now</h2><p id="versionDisplay">v...</p>
+  <h2>🎶 Play it Now</h2><p id="now_playing"></p>
+  <p id="versionDisplay">v...</p>
   <audio id="audioPlayer" controls></audio>
   <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
     <label id="chooseBtn" class="file-label" style="display: flex; align-items: center;">
@@ -20,6 +21,7 @@
     <button id="shuffleBtn" style="display: flex; align-items: center;">🔀 Shuffle Off</button>
   </div>
   <button id="clearBtn">🗑️ Clear Playlist</button>
+  <button id="nextBtn">⏭️ Next</button>
   <ul id="playlist"></ul>
   <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.2/dist/dexie.min.js"></script>
   <script src="script.js"></script>

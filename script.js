@@ -2,6 +2,7 @@ const fileInput = document.getElementById('fileInput');
 const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
+let playedIndices = []; // Track played songs in shuffle mode
 let currentIndex = 0;
 let isShuffle = false;
 
@@ -42,6 +43,30 @@ async function loadSongsFromDB() {
   }
 
   return { blobs, names };
+}
+// ===========================================================
+// ✅ Play next song
+function playNextSong() {
+  if (isShuffle) {
+    // If all songs have been played, reset
+    if (playedIndices.length >= songs.length) {
+      playedIndices = [];
+    }
+    // Get unplayed indices
+    const unplayed = [...Array(songs.length).keys()].filter(i => !playedIndices.includes(i));
+    // Pick a random unplayed index
+    currentIndex = unplayed[Math.floor(Math.random() * unplayed.length)];
+    playedIndices.push(currentIndex);
+  } 
+  else {
+    currentIndex++;
+  }
+
+  if (currentIndex >= songs.length) {
+    currentIndex = 0;
+  }
+  playSongFromBlob(songs[currentIndex]);
+  saveStateToDB();
 }
 // ===========================================================
 // ✅ Play song from Blob
@@ -106,6 +131,7 @@ function highlightCurrent(index) {
   rows.forEach((row, i) => {
     row.classList.toggle('active', i === index); // Mark the playing song
   });
+  document.getElementById("now_playing").innerHTML = songs[index].name;
 }
 // ===========================================================
 // ✅ Save currentIndex and shuffle state to localStorage
@@ -215,19 +241,13 @@ document.getElementById('shuffleBtn').addEventListener('click', async () => {
   saveStateToDB();
 });
 // ===========================================================
+document.getElementById('nextBtn').addEventListener('click', () => {
+  playNextSong();
+});
+// ===========================================================
 // ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
-  if (isShuffle) {
-    currentIndex = Math.floor(Math.random() * songs.length);
-  } else {
-    currentIndex++;
-  }
-
-  if (currentIndex >= songs.length) {
-    currentIndex = 0;
-  }
-  playSongFromBlob(songs[currentIndex]);
-  saveStateToDB();
+  playNextSong();
 });
 
 // ===========================================================
@@ -279,27 +299,3 @@ if ('serviceWorker' in navigator) {
     reg.update(); // manually check for a new SW
   });
 }
-/*
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js',{updateViaCache: 'none'}).then(reg => {
-    reg.onupdatefound = () => {
-      const newWorker = reg.installing;
-      newWorker.onstatechange = () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          const confirmed = confirm('New version available! Reload to update?');
-          if (confirmed) {
-            newWorker.postMessage({ type: 'SKIP_WAITING' });
-          }
-        }
-      };
-    };
-  });
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Force reload with cache-busting query
-    location.href = location.origin + location.pathname + '?v=' + Date.now();
-  });  
-  //navigator.serviceWorker.addEventListener('controllerchange', () => {
-  //  window.location.reload();
-  //});
-}
-*/
