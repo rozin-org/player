@@ -132,6 +132,18 @@ function highlightCurrent(index) {
     row.classList.toggle('active', i === index); // Mark the playing song
   });
   document.getElementById("now_playing").innerHTML = songs[index].name;
+  // Update Media Session metadata
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: songs[currentIndex].name,
+      artist: '', // You can add artist if available
+      album: '',  // You can add album if available
+      artwork: [
+        { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+      ]
+    });
+  }
 }
 // ===========================================================
 // ✅ Save currentIndex and shuffle state to localStorage
