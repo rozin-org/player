@@ -143,8 +143,18 @@ function highlightCurrent(index) {
         { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
     });
+    // Add both handlers for best compatibility
     navigator.mediaSession.setActionHandler('nexttrack', () => {
-      document.getElementById('nextBtn').click();
+      playNextSong();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      // Optionally implement previous song logic, or leave empty
+    });
+    navigator.mediaSession.setActionHandler('play', () => {
+      audioPlayer.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audioPlayer.pause();
     });
   }
 }
