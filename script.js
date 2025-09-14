@@ -2,6 +2,7 @@ const fileInput = document.getElementById('fileInput');
 const audioPlayer = document.getElementById('audioPlayer');
 const playlistEl = document.getElementById('playlist');
 let songs = [];
+let playedIndices = []; // Track played songs in shuffle mode
 let currentIndex = 0;
 let isShuffle = false;
 
@@ -219,8 +220,17 @@ document.getElementById('shuffleBtn').addEventListener('click', async () => {
 // ✅ Auto-play next song
 audioPlayer.addEventListener('ended', () => {
   if (isShuffle) {
-    currentIndex = Math.floor(Math.random() * songs.length);
-  } else {
+    // If all songs have been played, reset
+    if (playedIndices.length >= songs.length) {
+      playedIndices = [];
+    }
+    // Get unplayed indices
+    const unplayed = [...Array(songs.length).keys()].filter(i => !playedIndices.includes(i));
+    // Pick a random unplayed index
+    currentIndex = unplayed[Math.floor(Math.random() * unplayed.length)];
+    playedIndices.push(currentIndex);
+  } 
+  else {
     currentIndex++;
   }
 
