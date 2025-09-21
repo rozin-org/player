@@ -13,13 +13,13 @@ const urlsToCache = [
 async function cleanupOldCaches() {
   let version = 'v0';
   try {
-    const res = await fetch('https://rozin-org.github.io/player/version.json', { cache: 'no-store' });
+    const res = await fetch('https://orders-holiday.web.app/version.json', { cache: 'no-store' });
     const data = await res.json();
     version = 'v' + (data.version || '0');
   } catch (err) {
     // fallback if fetch fails
   }
-  const dynamicCacheName = 'play-it-now-' + version;
+  const dynamicCacheName = 'orders-' + version;
   const keys = await caches.keys();
   await Promise.all(keys.filter(k => k !== dynamicCacheName).map(k => caches.delete(k)));
   return dynamicCacheName;
